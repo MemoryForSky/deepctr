@@ -10,8 +10,8 @@ from sklearn.metrics import *
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 
-from preprocessing.inputs import SparseFeat, DenseFeat, VarLenSparseFeat, create_embedding_matrix, get_varlen_pooling_list, \
-                    build_input_features
+from preprocessing.inputs import SparseFeat, DenseFeat, VarLenSparseFeat, create_embedding_matrix, \
+    get_varlen_pooling_list, build_input_features
 from layers.core import PredictionLayer
 from preprocessing.utils import slice_arrays
 
@@ -205,9 +205,6 @@ class BaseTower(nn.Module):
                 y_pred = model(x).cpu().data.numpy()
                 pred_ans.append(y_pred)
 
-            self.user_embedding = model.user_dnn_out
-            self.item_embedding = model.item_dnn_out
-
         return np.concatenate(pred_ans).astype("float64")
 
     def input_from_feature_columns(self, X, feature_columns, embedding_dict, support_dense=True):
@@ -227,14 +224,12 @@ class BaseTower(nn.Module):
         sparse_embedding_list = [embedding_dict[feat.embedding_name](
             X[:, self.feature_index[feat.name][0]:self.feature_index[feat.name][1]].long()) for
             feat in sparse_feature_columns]
-        # print(sparse_feature_columns, sparse_embedding_list[0].shape)
 
         varlen_sparse_embedding_list = get_varlen_pooling_list(embedding_dict, X, self.feature_index,
                                                                varlen_sparse_feature_columns, self.device)
 
         dense_value_list = [X[:, self.feature_index[feat.name][0]:self.feature_index[feat.name][1]] for feat in
                             dense_feature_columns]
-        # print(dense_feature_columns, dense_value_list[0].shape)
 
         return sparse_embedding_list + varlen_sparse_embedding_list, dense_value_list
 

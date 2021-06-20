@@ -33,33 +33,10 @@ def slice_arrays(arrays, start=None, stop=None):
             return [None]
 
 
-def div(x, y):
-    try:
-        return torch.div(x, y)
-    except AttributeError:
-        return torch.divide(x, y)
-
-
-def clip_by_value(t, t_min, t_max):
-    """
-    clip_by_tensor
-    :param t: tensor
-    :param t_min: min
-    :param t_max: max
-    :return: cliped tensor
-    """
-    t = t.float()
-    t_min = t_min
-    t_max = t_max
-    result = (t >= t_min).float() * t + (t < t_min).float() * t_min
-    result = (result <= t_max).float() * result + (result > t_max).float() * t_max
-    return result
-
-
 def Cosine_Similarity(query, candidate, gamma=1, dim=-1):
     query_norm = torch.norm(query, dim=dim)
     candidate_norm = torch.norm(candidate, dim=dim)
     cosine_score = torch.sum(torch.multiply(query, candidate), dim=-1)
-    cosine_score = div(cosine_score, query_norm*candidate_norm+1e-8)
-    cosine_score = clip_by_value(cosine_score, -1, 1.0)*gamma
+    cosine_score = torch.div(cosine_score, query_norm*candidate_norm+1e-8)
+    cosine_score = torch.clamp(cosine_score, -1, 1.0)*gamma
     return cosine_score

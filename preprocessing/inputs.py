@@ -1,7 +1,10 @@
+import numpy as np
 import torch
 import torch.nn as nn
 from collections import OrderedDict, namedtuple
 from layers.sequence import SequencePoolingLayer
+from collections import OrderedDict, namedtuple, defaultdict
+from itertools import chain
 
 DEFAULT_GROUP_NAME = "default_group"
 
@@ -196,6 +199,45 @@ def compute_input_dim(feature_columns, include_sparse=True, include_dense=True, 
         input_dim += dense_input_dim
     return input_dim
 
+
+def embedding_lookup(X, sparse_embedding_dict, sparse_input_dict, sparse_feature_columns,
+                     return_feat_list=(), mask_feat_list=(), to_list=False):
+    group_embedding_dict = defaultdict(list)
+    for fc in sparse_feature_columns:
+        feature_name = fc.name
+        embedding_name = fc.embedding_name
+        if len(return_feat_list) == 0 or feature_name in return_feat_list:
+            lookup_idx = np.array(sparse_input_dict[feature_name])
+            input_tensor = X[:, lookup_idx[0]:lookup_idx[1]].long()
+            emb = sparse_embedding_dict[embedding_name](input_tensor)
+            group_embedding_dict[fc.group_name].append(emb)
+    if to_list:
+        return list(chain.from_iterable(group_embedding_dict.values()))
+    return group_embedding_dict
+
+
+def varlen_embedding_lookup(X, embedding_dict, sequence_input_dict, varlen_sparse_feature_columns):
+    varlen_embedding_vec_dict = {}
+    for fc in varlen_sparse_feature_columns:
+        feature_name = fc.name
+        embedding_name = fc.embedding_name
+        if fc.use_hash:
+            # lookup_idx = Hash(fc.vocabulary_size, mask_zero=True)(sequence_input_dict[feature_name])
+            # TODO: add hash function
+            lookup_idx = sequence_input_dict[feature_name]
+        else:
+            lookup_idx = sequence_input_dict[feature_name]
+        varlen_embedding_vec_dict[feature_name] = embedding_dict[embedding_name](
+            X[:, lookup_idx[0]:lookup_idx[1]].long())  # (lookup_idx)
+
+    return varlen_embedding_vec_dict
+
+
+def maxlen_lookup(X, sparse_input_dict, maxlen_column):
+    if maxlen_column is None or len(maxlen_column)==0:
+        raise ValueError('please add max length column for VarLenSparseFeat of DIN/DIEN input')
+    lookup_idx = np.array(sparse_input_dict[maxlen_column[0]])
+    return X[:, lookup_idx[0]:lookup_idx[1]].long()
 
 # if __name__ == '__main__':
 #     user_id = SparseFeat('user_id', 1000, embedding_dim=4)

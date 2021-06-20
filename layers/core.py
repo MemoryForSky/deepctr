@@ -65,3 +65,41 @@ class DNN(nn.Module):
             fc = self.dropout(fc)
             deep_input = fc
         return deep_input
+
+
+class LocalActivationUnit(nn.Module):
+    def __init__(self, hidden_units=(64, 32), embedding_dim=4, activation='sigmoid', dropout_rate=0,
+                 dice_dim=3, l2_reg=0, use_bn=False):
+        super(LocalActivationUnit, self).__init__()
+
+        self.dnn = DNN(inputs_dim=4 * embedding_dim,
+                       hidden_units=hidden_units,
+                       activation=activation,
+                       l2_reg=l2_reg,
+                       dropout_rate=dropout_rate,
+                       dice_dim=dice_dim,
+                       use_bn=use_bn)
+
+        self.dense = nn.Linear(hidden_units[-1], 1)
+
+    def forward(self, query, user_behavier):
+        # query ad            : size -> batch_size * 1 * embedding_size
+        # user behavior       : size -> batch_size * time_seq_len * embedding_size
+        user_behavier_len = user_behavier.size(1)
+
+        queries = query.expand(-1, user_behavier_len, -1)
+
+        attention_input = torch.cat([queries, user_behavier, queries - user_behavier, queries * user_behavier],
+                                    dim=-1)    # [B, T, 4*E]
+        attention_out = self.dnn(attention_input)
+
+        attention_score = self.dense(attention_out)    # [B, T, 1]
+
+        return attention_score
+
+
+
+
+
+
+
