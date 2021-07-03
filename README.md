@@ -7,3 +7,6 @@ This code based on https://github.com/shenweichen/DeepCTR-Torch.
 - DSSM
 - Wide&Deep
 - DeepFM
+- NFM
+- AFM
+- DCN
