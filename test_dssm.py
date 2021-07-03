@@ -75,7 +75,7 @@ def get_test_var_feature(data, col, key2index, max_len):
 if __name__ == '__main__':
     # %%
     data_path = './data/movielens.txt'
-    train, test, data = data_process(data_path, samp_rows=100000)
+    train, test, data = data_process(data_path, samp_rows=10000)
     train = get_user_feature(train)
     train = get_item_feature(train)
 
@@ -166,5 +166,34 @@ if __name__ == '__main__':
 
     # %%
     # 7.Embedding
-    print("user embedding shape: ", model.user_dnn_embedding.shape)
-    print("item embedding shape: ", model.item_dnn_embedding.shape)
+    print("user embedding shape: ", model.user_dnn_embedding[:2])
+    print("item embedding shape: ", model.item_dnn_embedding[:2])
+
+    # %%
+    # 8. get single tower
+    dict_trained = model.state_dict()    # trained model
+    trained_lst = list(dict_trained.keys())
+
+    # user tower
+    model_user = DSSM(user_feature_columns, [], task='binary', device=device)
+    dict_user = model_user.state_dict()
+    for key in dict_user:
+        dict_user[key] = dict_trained[key]
+    model_user.load_state_dict(dict_user)    # load trained model parameters of user tower
+    user_feature_name = user_sparse_features + user_dense_features
+    user_model_input = {name: test[name] for name in user_feature_name}
+    user_model_input["user_hist"] = test_user_hist
+    user_embedding = model_user.predict(user_model_input, batch_size=2000)
+    print("single user embedding shape: ", user_embedding[:2])
+
+    # item tower
+    model_item = DSSM([], item_feature_columns, task='binary', device=device)
+    dict_item = model_item.state_dict()
+    for key in dict_item:
+        dict_item[key] = dict_trained[key]
+    model_item.load_state_dict(dict_item)  # load trained model parameters of item tower
+    item_feature_name = item_sparse_features + item_dense_features
+    item_model_input = {name: test[name] for name in item_feature_name}
+    item_model_input["genres"] = test_genres_list
+    item_embedding = model_item.predict(item_model_input, batch_size=2000)
+    print("single item embedding shape: ", item_embedding[:2])
