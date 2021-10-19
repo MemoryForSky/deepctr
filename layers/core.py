@@ -34,7 +34,10 @@ class DNN(nn.Module):
         self.use_bn = use_bn
         if len(hidden_units) == 0:
             raise ValueError("hidden_units is empty!!")
-        hidden_units = [inputs_dim] + list(hidden_units)
+        if inputs_dim > 0:
+            hidden_units = [inputs_dim] + list(hidden_units)
+        else:
+            hidden_units = list(hidden_units)
 
         self.linears = nn.ModuleList(
             [nn.Linear(hidden_units[i], hidden_units[i+1]) for i in range(len(hidden_units) - 1)])
