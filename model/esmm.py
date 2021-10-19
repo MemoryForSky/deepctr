@@ -49,4 +49,5 @@ class ESMM(BaseTower):
 
         ctcvr = ctr * cvr
 
+        # TODO
         return ctcvr, ctr
